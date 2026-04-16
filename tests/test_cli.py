@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from codex_supervisor.cli import main
 from codex_supervisor.cli import build_parser
 
 
@@ -14,3 +17,55 @@ def test_cli_has_expected_top_level_commands() -> None:
         "cancel",
         "logs",
     }
+
+
+def test_submit_writes_command_file(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CODEX_SUPERVISOR_PROJECT_ROOT", str(tmp_path))
+    exit_code = main(
+        [
+            "submit",
+            "--cwd",
+            r"C:\Windows\system32",
+            "--prompt",
+            "inspect latest 429 events",
+        ]
+    )
+    assert exit_code == 0
+    files = list((tmp_path / "data" / "commands").glob("*.json"))
+    assert len(files) == 1
+
+
+def test_status_reads_task_row(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("CODEX_SUPERVISOR_PROJECT_ROOT", str(tmp_path))
+    from codex_supervisor.models import TaskKind
+    from codex_supervisor.state import StateStore
+
+    store = StateStore(tmp_path / "data" / "supervisor.db")
+    task_id = store.create_task(
+        kind=TaskKind.EXEC_PROMPT,
+        cwd=r"C:\Windows\system32",
+        payload={"prompt": "hello"},
+        priority=50,
+    )
+    exit_code = main(["status", "--task-id", str(task_id)])
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert f"task_id={task_id}" in output
+
+
+def test_list_prints_existing_tasks(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("CODEX_SUPERVISOR_PROJECT_ROOT", str(tmp_path))
+    from codex_supervisor.models import TaskKind
+    from codex_supervisor.state import StateStore
+
+    store = StateStore(tmp_path / "data" / "supervisor.db")
+    store.create_task(
+        kind=TaskKind.EXEC_PROMPT,
+        cwd=r"C:\Windows\system32",
+        payload={"prompt": "hello"},
+        priority=50,
+    )
+    exit_code = main(["list"])
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "status=queued" in output

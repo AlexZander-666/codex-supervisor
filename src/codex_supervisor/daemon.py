@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import time
 
 
 def acquire_daemon_lock(lock_path: Path) -> Path | None:
@@ -13,3 +14,8 @@ def acquire_daemon_lock(lock_path: Path) -> Path | None:
         handle.write(str(os.getpid()))
 
     return lock_path
+
+
+def run_forever() -> None:
+    while True:
+        time.sleep(60)

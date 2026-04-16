@@ -87,3 +87,26 @@ class StateStore:
                 "UPDATE tasks SET status = ?, lease_owner = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
                 (status.value, lease_owner, task_id),
             )
+
+    def list_tasks(self, *, limit: int = 50) -> list[TaskRecord]:
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                (
+                    "SELECT id, kind, status, cwd, payload_json, priority, lease_owner, "
+                    "attempt_count FROM tasks ORDER BY id DESC LIMIT ?"
+                ),
+                (limit,),
+            ).fetchall()
+        return [
+            TaskRecord(
+                id=row[0],
+                kind=TaskKind(row[1]),
+                status=TaskStatus(row[2]),
+                cwd=row[3],
+                payload=json.loads(row[4]),
+                priority=row[5],
+                lease_owner=row[6],
+                attempt_count=row[7],
+            )
+            for row in rows
+        ]
