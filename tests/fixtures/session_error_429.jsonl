@@ -1,0 +1,2 @@
+{"timestamp":"2026-04-16T15:28:09Z","type":"session_meta","payload":{"id":"s-1","cwd":"C:\\Windows\\system32"}}
+{"timestamp":"2026-04-16T15:28:10Z","type":"event_msg","payload":{"type":"error","message":"exceeded retry limit, last status: 429 Too Many Requests","codex_error_info":{"response_too_many_failed_attempts":{"http_status_code":429}}}}
