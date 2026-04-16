@@ -33,3 +33,20 @@ def test_classify_disconnect_session(tmp_path: Path) -> None:
     finding = classify_session_file(session_file)
     assert finding.session_id == "s-2"
     assert finding.reason == "stream_disconnect"
+
+
+def test_classify_session_ignores_truncated_json_line(tmp_path: Path) -> None:
+    session_file = tmp_path / "truncated.jsonl"
+    session_file.write_text(
+        "\n".join(
+            [
+                '{"timestamp":"2026-04-16T15:28:09Z","type":"session_meta","payload":{"id":"s-3","cwd":"C:\\\\Windows\\\\system32"}}',
+                '{"timestamp":"2026-04-16T15:28:10Z","type":"event_msg","payload":{"type":"exec_output","message":"unterminated"',
+                '{"timestamp":"2026-04-16T15:28:11Z","type":"event_msg","payload":{"type":"error","message":"stream disconnected before completion: stream closed before response.completed","codex_error_info":"other"}}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    finding = classify_session_file(session_file)
+    assert finding is not None
+    assert finding.reason == "stream_disconnect"

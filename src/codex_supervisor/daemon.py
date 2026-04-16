@@ -8,6 +8,7 @@ from codex_supervisor.log_parser import classify_session_file
 from codex_supervisor.models import TaskKind, TaskStatus
 from codex_supervisor.runner import launch_task
 from codex_supervisor.scheduler import Scheduler
+from codex_supervisor.session_monitor import SessionMonitor
 from codex_supervisor.service import resolve_project_root
 from codex_supervisor.state import StateStore
 
@@ -50,7 +51,32 @@ def run_single_daemon_iteration(config: SupervisorConfig) -> None:
                 payload=command["payload"],
                 priority=command["priority"],
             )
+        elif command["type"] == "pause":
+            store.transition_task(command["task_id"], TaskStatus.PAUSED, lease_owner=None)
+        elif command["type"] == "resume":
+            store.force_ready(command["task_id"])
+        elif command["type"] == "cancel":
+            store.transition_task(
+                command["task_id"],
+                TaskStatus.CANCELED,
+                lease_owner=None,
+            )
         command = inbox.read_next_command()
+
+    monitor = SessionMonitor(config.codex_home / "sessions")
+    for finding in monitor.scan():
+        if store.has_task_for_session(finding.session_id):
+            continue
+        store.create_task(
+            kind=TaskKind.RESUME_SESSION,
+            cwd=finding.cwd,
+            payload={
+                "session_id": finding.session_id,
+                "prompt": f"continue after {finding.reason}",
+            },
+            priority=100,
+            session_id=finding.session_id,
+        )
 
     for task in scheduler.claim_ready_tasks():
         log_path = config.data_dir / "logs" / f"task-{task.id}.jsonl"

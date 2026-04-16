@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import json
+from json import JSONDecodeError
 from pathlib import Path
 
 
@@ -15,7 +16,10 @@ def classify_session_file(session_path: Path) -> SessionFinding | None:
     session_id = ""
     cwd = ""
     for raw_line in session_path.read_text(encoding="utf-8").splitlines():
-        data = json.loads(raw_line)
+        try:
+            data = json.loads(raw_line)
+        except JSONDecodeError:
+            continue
         event_type = data.get("type")
         payload = data.get("payload", {})
         if event_type == "session_meta":

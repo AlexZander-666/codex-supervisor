@@ -37,12 +37,13 @@ class StateStore:
         cwd: str,
         payload: dict,
         priority: int,
+        session_id: str | None = None,
     ) -> int:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute(
                 (
-                    "INSERT INTO tasks (kind, status, cwd, payload_json, priority) "
-                    "VALUES (?, ?, ?, ?, ?)"
+                    "INSERT INTO tasks (kind, status, cwd, payload_json, priority, session_id) "
+                    "VALUES (?, ?, ?, ?, ?, ?)"
                 ),
                 (
                     kind.value,
@@ -50,6 +51,7 @@ class StateStore:
                     cwd,
                     json.dumps(payload),
                     priority,
+                    session_id,
                 ),
             )
             return int(cursor.lastrowid)
@@ -155,3 +157,11 @@ class StateStore:
             lease_owner=row[6],
             attempt_count=row[7],
         )
+
+    def has_task_for_session(self, session_id: str) -> bool:
+        with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute(
+                "SELECT 1 FROM tasks WHERE session_id = ? LIMIT 1",
+                (session_id,),
+            ).fetchone()
+        return row is not None
