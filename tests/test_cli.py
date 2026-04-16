@@ -69,3 +69,28 @@ def test_list_prints_existing_tasks(tmp_path: Path, monkeypatch, capsys) -> None
     output = capsys.readouterr().out
     assert exit_code == 0
     assert "status=queued" in output
+
+
+def test_pause_and_resume_write_commands(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("CODEX_SUPERVISOR_PROJECT_ROOT", str(tmp_path))
+    from codex_supervisor.models import TaskKind
+    from codex_supervisor.state import StateStore
+
+    store = StateStore(tmp_path / "data" / "supervisor.db")
+    task_id = store.create_task(
+        kind=TaskKind.EXEC_PROMPT,
+        cwd=str(tmp_path),
+        payload={"prompt": "hello"},
+        priority=50,
+    )
+    assert main(["pause", "--task-id", str(task_id)]) == 0
+    assert main(["resume", "--task-id", str(task_id)]) == 0
+
+
+def test_logs_reads_log_file(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("CODEX_SUPERVISOR_PROJECT_ROOT", str(tmp_path))
+    log_path = tmp_path / "data" / "logs" / "task-1.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text('{"event":"hello"}\n', encoding="utf-8")
+    assert main(["logs", "--task-id", "1"]) == 0
+    assert '{"event":"hello"}' in capsys.readouterr().out

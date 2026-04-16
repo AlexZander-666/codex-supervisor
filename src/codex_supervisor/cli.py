@@ -1,7 +1,13 @@
 import argparse
 
 from codex_supervisor.daemon import run_forever
-from codex_supervisor.service import render_task_list, render_task_status, submit_exec_task
+from codex_supervisor.service import (
+    read_task_logs,
+    render_task_list,
+    render_task_status,
+    submit_exec_task,
+    write_operator_command,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -19,10 +25,18 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("--task-id", type=int, required=True)
 
     subparsers.add_parser("list")
-    subparsers.add_parser("pause")
-    subparsers.add_parser("resume")
-    subparsers.add_parser("cancel")
-    subparsers.add_parser("logs")
+
+    pause = subparsers.add_parser("pause")
+    pause.add_argument("--task-id", type=int, required=True)
+
+    resume = subparsers.add_parser("resume")
+    resume.add_argument("--task-id", type=int, required=True)
+
+    cancel = subparsers.add_parser("cancel")
+    cancel.add_argument("--task-id", type=int, required=True)
+
+    logs = subparsers.add_parser("logs")
+    logs.add_argument("--task-id", type=int, required=True)
     return parser
 
 
@@ -38,6 +52,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "list":
         print(render_task_list())
+        return 0
+    if args.command in {"pause", "resume", "cancel"}:
+        write_operator_command(command_type=args.command, task_id=args.task_id)
+        print(args.command)
+        return 0
+    if args.command == "logs":
+        print(read_task_logs(args.task_id))
         return 0
     if args.command == "start-daemon":
         run_forever()

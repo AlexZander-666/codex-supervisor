@@ -28,6 +28,12 @@ def submit_exec_task(*, cwd: str, prompt: str, priority: int) -> None:
     )
 
 
+def write_operator_command(*, command_type: str, task_id: int) -> None:
+    config = load_config(resolve_project_root())
+    inbox = CommandInbox(config.data_dir / "commands")
+    inbox.write_command({"type": command_type, "task_id": task_id})
+
+
 def render_task_status(task_id: int) -> str:
     config = load_config(resolve_project_root())
     store = StateStore(config.data_dir / "supervisor.db")
@@ -49,3 +55,11 @@ def render_task_list() -> str:
         )
         for task in tasks
     )
+
+
+def read_task_logs(task_id: int) -> str:
+    config = load_config(resolve_project_root())
+    log_path = config.data_dir / "logs" / f"task-{task_id}.jsonl"
+    if not log_path.exists():
+        return ""
+    return log_path.read_text(encoding="utf-8")
