@@ -64,16 +64,7 @@ class StateStore:
                 (task_id,),
             ).fetchone()
         assert row is not None
-        return TaskRecord(
-            id=row[0],
-            kind=TaskKind(row[1]),
-            status=TaskStatus(row[2]),
-            cwd=row[3],
-            payload=json.loads(row[4]),
-            priority=row[5],
-            lease_owner=row[6],
-            attempt_count=row[7],
-        )
+        return self._row_to_task(row)
 
     def transition_task(
         self,
@@ -93,20 +84,71 @@ class StateStore:
             rows = conn.execute(
                 (
                     "SELECT id, kind, status, cwd, payload_json, priority, lease_owner, "
-                    "attempt_count FROM tasks ORDER BY id DESC LIMIT ?"
+                    "attempt_count FROM tasks ORDER BY id ASC LIMIT ?"
                 ),
                 (limit,),
             ).fetchall()
-        return [
-            TaskRecord(
-                id=row[0],
-                kind=TaskKind(row[1]),
-                status=TaskStatus(row[2]),
-                cwd=row[3],
-                payload=json.loads(row[4]),
-                priority=row[5],
-                lease_owner=row[6],
-                attempt_count=row[7],
+        return [self._row_to_task(row) for row in rows]
+
+    def count_active_tasks(self) -> int:
+        with sqlite3.connect(self.db_path) as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM tasks WHERE status IN (?, ?)",
+                (TaskStatus.LAUNCHING.value, TaskStatus.RUNNING.value),
+            ).fetchone()
+        assert row is not None
+        return int(row[0])
+
+    def list_ready_tasks(self, *, limit: int) -> list[TaskRecord]:
+        with sqlite3.connect(self.db_path) as conn:
+            rows = conn.execute(
+                """
+                SELECT id, kind, status, cwd, payload_json, priority, lease_owner, attempt_count
+                FROM tasks
+                WHERE status = ?
+                ORDER BY priority DESC, id ASC
+                LIMIT ?
+                """,
+                (TaskStatus.QUEUED.value, limit),
+            ).fetchall()
+        return [self._row_to_task(row) for row in rows]
+
+    def set_backoff(self, task_id: int, run_at_epoch: float) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                UPDATE tasks
+                SET status = ?, next_run_at = ?, lease_owner = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (TaskStatus.BACKING_OFF.value, str(run_at_epoch), task_id),
             )
-            for row in rows
-        ]
+
+    def increment_attempt_count(self, task_id: int) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                (
+                    "UPDATE tasks SET attempt_count = attempt_count + 1, "
+                    "updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                ),
+                (task_id,),
+            )
+
+    def force_ready(self, task_id: int) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "UPDATE tasks SET status = ?, next_run_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (TaskStatus.QUEUED.value, task_id),
+            )
+
+    def _row_to_task(self, row: tuple) -> TaskRecord:
+        return TaskRecord(
+            id=row[0],
+            kind=TaskKind(row[1]),
+            status=TaskStatus(row[2]),
+            cwd=row[3],
+            payload=json.loads(row[4]),
+            priority=row[5],
+            lease_owner=row[6],
+            attempt_count=row[7],
+        )
