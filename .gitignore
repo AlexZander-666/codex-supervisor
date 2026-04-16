@@ -1,0 +1,9 @@
+__pycache__/
+.pytest_cache/
+.venv/
+build/
+dist/
+data/*.db
+data/*.lock
+data/*.pid
+data/logs/
