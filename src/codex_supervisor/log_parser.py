@@ -16,11 +16,13 @@ def classify_session_file(session_path: Path) -> SessionFinding | None:
     cwd = ""
     for raw_line in session_path.read_text(encoding="utf-8").splitlines():
         data = json.loads(raw_line)
-        if data["type"] == "session_meta":
-            session_id = data["payload"]["id"]
-            cwd = data["payload"]["cwd"]
-        if data["type"] == "event_msg" and data["payload"]["type"] == "error":
-            message = data["payload"]["message"]
+        event_type = data.get("type")
+        payload = data.get("payload", {})
+        if event_type == "session_meta":
+            session_id = payload["id"]
+            cwd = payload["cwd"]
+        if event_type == "event_msg" and payload.get("type") == "error":
+            message = payload["message"]
             if "429 Too Many Requests" in message:
                 return SessionFinding(
                     session_id=session_id,

@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import subprocess
 
 from codex_supervisor.config import SupervisorConfig
@@ -12,6 +13,18 @@ def build_codex_command(
     cwd: str,
     payload: dict,
 ) -> list[str]:
+    fake_script = os.environ.get("CODEX_SUPERVISOR_FAKE_CODEX_SCRIPT")
+    if fake_script:
+        if task_kind is TaskKind.EXEC_PROMPT:
+            return [config.codex_bin, fake_script, "exec", payload["prompt"]]
+        return [
+            config.codex_bin,
+            fake_script,
+            "resume",
+            payload["session_id"],
+            payload["prompt"],
+        ]
+
     if task_kind is TaskKind.EXEC_PROMPT:
         return [
             config.codex_bin,

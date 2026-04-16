@@ -137,7 +137,10 @@ class StateStore:
     def force_ready(self, task_id: int) -> None:
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                "UPDATE tasks SET status = ?, next_run_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (
+                    "UPDATE tasks SET status = ?, next_run_at = NULL, lease_owner = NULL, "
+                    "updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                ),
                 (TaskStatus.QUEUED.value, task_id),
             )
 
