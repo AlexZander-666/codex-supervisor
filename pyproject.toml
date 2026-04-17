@@ -7,7 +7,7 @@ name = "codex-supervisor"
 version = "0.1.0"
 description = "Queueing and recovery supervisor for Codex CLI on Windows"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["textual>=0.86,<1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
