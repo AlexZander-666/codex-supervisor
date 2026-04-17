@@ -66,6 +66,25 @@ pip install -e .[dev]
 
 If you keep a long-running daemon open, restart it after upgrading so the new code is loaded.
 
+## Quick Start
+
+For the fastest first run, open two terminals.
+
+In terminal 1, start the daemon:
+
+```powershell
+python -m codex_supervisor start-daemon
+```
+
+In terminal 2, submit a task and then open the TUI:
+
+```powershell
+codex-supervisor submit --cwd C:\Windows\system32 --prompt "hello"
+codex-supervisor tui
+```
+
+You should see the new task appear in the TUI within about 1 second, along with its structured status and recent output.
+
 ## Start The Daemon
 
 ```powershell

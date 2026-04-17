@@ -12,3 +12,11 @@ def test_readme_mentions_release_install_and_upgrade_steps() -> None:
     assert "## Release Install" in readme
     assert "## Upgrade" in readme
     assert "git fetch --tags" in readme
+
+
+def test_readme_mentions_quick_start_flow() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    assert "## Quick Start" in readme
+    assert "python -m codex_supervisor start-daemon" in readme
+    assert 'codex-supervisor submit --cwd C:\\Windows\\system32 --prompt "hello"' in readme
+    assert "codex-supervisor tui" in readme
