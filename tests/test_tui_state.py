@@ -1,0 +1,38 @@
+from pathlib import Path
+
+from codex_supervisor.models import TaskKind, TaskStatus
+from codex_supervisor.state import StateStore
+from codex_supervisor.tui_state import build_task_snapshot
+
+
+def test_build_task_snapshot_extracts_structured_runtime_fields(tmp_path: Path) -> None:
+    store = StateStore(tmp_path / "supervisor.db")
+    task_id = store.create_task(
+        kind=TaskKind.RESUME_SESSION,
+        cwd=r"C:\work\repo",
+        payload={"session_id": "session-1", "prompt": "continue"},
+        priority=100,
+        session_id="session-1",
+    )
+    store.transition_task(task_id, TaskStatus.RUNNING, lease_owner="daemon-main")
+    log_path = tmp_path / "task-1.jsonl"
+    log_path.write_text(
+        "\n".join(
+            [
+                '{"source":"supervisor","type":"launch","command":["codex","exec","resume","--json","session-1","continue"],"cwd":"C:\\\\work\\\\repo"}',
+                '{"type":"thread.started","thread_id":"session-1"}',
+                '{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"powershell -Command pnpm type-check","status":"in_progress"}}',
+                '{"type":"item.completed","item":{"id":"item_2","type":"agent_message","text":"继续排查登录分支同步问题。"}}',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    snapshot = build_task_snapshot(store.get_task(task_id), log_path)
+
+    assert snapshot.task_id == task_id
+    assert snapshot.status == "running"
+    assert snapshot.current_command == "powershell -Command pnpm type-check"
+    assert snapshot.stage == "command_execution"
+    assert snapshot.retry_count == 0
+    assert "继续排查登录分支同步问题" in snapshot.recent_output
