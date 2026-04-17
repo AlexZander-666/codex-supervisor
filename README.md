@@ -36,6 +36,36 @@ cd C:\Users\black\tools\codex-supervisor
 pip install -e .[dev]
 ```
 
+## Release Install
+
+Install the released `v0.1.0` build from GitHub:
+
+```powershell
+git clone https://github.com/AlexZander-666/codex-supervisor.git
+cd codex-supervisor
+git checkout v0.1.0
+pip install -e .[dev]
+```
+
+After install, verify the CLI is available:
+
+```powershell
+codex-supervisor --help
+```
+
+## Upgrade
+
+Upgrade an existing clone to the latest tagged release:
+
+```powershell
+cd C:\Users\black\tools\codex-supervisor
+git fetch --tags
+git checkout v0.1.0
+pip install -e .[dev]
+```
+
+If you keep a long-running daemon open, restart it after upgrading so the new code is loaded.
+
 ## Start The Daemon
 
 ```powershell
