@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import os
 import subprocess
 
@@ -62,6 +63,20 @@ def launch_task(
     )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     handle = log_path.open("w", encoding="utf-8")
+    handle.write(
+        json.dumps(
+            {
+                "source": "supervisor",
+                "type": "launch",
+                "task_kind": task_kind.value,
+                "cwd": cwd,
+                "command": command,
+            },
+            separators=(",", ":"),
+        )
+        + "\n"
+    )
+    handle.flush()
     return subprocess.Popen(
         command,
         cwd=cwd,

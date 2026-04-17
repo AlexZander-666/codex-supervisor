@@ -107,3 +107,30 @@ def test_daemon_processes_pause_resume_and_cancel_commands(
     inbox.write_command({"type": "cancel", "task_id": canceled_task})
     run_single_daemon_iteration(config)
     assert store.get_task(canceled_task).status is TaskStatus.CANCELED
+
+
+def test_daemon_marks_task_running_and_writes_launch_metadata(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("CODEX_SUPERVISOR_PROJECT_ROOT", str(tmp_path))
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path / ".codex"))
+    fake_codex = Path(__file__).parent / "fake_codex.py"
+    monkeypatch.setenv("CODEX_SUPERVISOR_CODEX_BIN", "python")
+    monkeypatch.setenv("CODEX_SUPERVISOR_FAKE_CODEX_SCRIPT", str(fake_codex))
+
+    config = load_config(tmp_path)
+    store = StateStore(config.data_dir / "supervisor.db")
+    task_id = store.create_task(
+        kind=TaskKind.EXEC_PROMPT,
+        cwd=str(tmp_path),
+        payload={"prompt": "hello"},
+        priority=50,
+    )
+
+    run_single_daemon_iteration(config)
+
+    log_text = (config.data_dir / "logs" / f"task-{task_id}.jsonl").read_text(encoding="utf-8")
+    assert '"source":"supervisor"' in log_text
+    assert '"type":"launch"' in log_text
+    assert store.get_task(task_id).status is TaskStatus.SUCCEEDED

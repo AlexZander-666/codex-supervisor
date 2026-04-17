@@ -87,6 +87,7 @@ def run_single_daemon_iteration(config: SupervisorConfig) -> None:
             payload=task.payload,
             log_path=log_path,
         )
+        store.transition_task(task.id, TaskStatus.RUNNING, lease_owner="daemon-main")
         exit_code = process.wait(timeout=1200)
         finding = classify_session_file(log_path)
         if exit_code == 0 and finding is None:
