@@ -37,6 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     logs = subparsers.add_parser("logs")
     logs.add_argument("--task-id", type=int, required=True)
+    subparsers.add_parser("tui")
     return parser
 
 
@@ -59,6 +60,11 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "logs":
         print(read_task_logs(args.task_id))
+        return 0
+    if args.command == "tui":
+        from codex_supervisor.tui_app import run_tui
+
+        run_tui()
         return 0
     if args.command == "start-daemon":
         run_forever()
