@@ -15,6 +15,7 @@ class SessionFinding:
 def classify_session_file(session_path: Path) -> SessionFinding | None:
     session_id = ""
     cwd = ""
+    pending_recovery: SessionFinding | None = None
     for raw_line in session_path.read_text(encoding="utf-8").splitlines():
         try:
             data = json.loads(raw_line)
@@ -28,17 +29,19 @@ def classify_session_file(session_path: Path) -> SessionFinding | None:
         if event_type == "event_msg" and payload.get("type") == "error":
             message = payload["message"]
             if "429 Too Many Requests" in message:
-                return SessionFinding(
+                pending_recovery = SessionFinding(
                     session_id=session_id,
                     cwd=cwd,
                     reason="http_429",
                     message=message,
                 )
-            if "stream disconnected before completion" in message:
-                return SessionFinding(
+            elif "stream disconnected before completion" in message:
+                pending_recovery = SessionFinding(
                     session_id=session_id,
                     cwd=cwd,
                     reason="stream_disconnect",
                     message=message,
                 )
-    return None
+        if event_type == "event_msg" and payload.get("type") == "task_complete":
+            pending_recovery = None
+    return pending_recovery

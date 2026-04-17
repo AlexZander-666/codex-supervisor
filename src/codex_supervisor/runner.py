@@ -40,6 +40,7 @@ def build_codex_command(
         "exec",
         "resume",
         "--json",
+        "--skip-git-repo-check",
         payload["session_id"],
         payload["prompt"],
     ]
