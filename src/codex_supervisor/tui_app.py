@@ -4,9 +4,13 @@ from textual.containers import Horizontal, Vertical
 from textual.widgets import Footer, Header
 
 from codex_supervisor.config import load_config
-from codex_supervisor.service import resolve_project_root
+from codex_supervisor.service import (
+    read_task_snapshots,
+    resolve_project_root,
+    write_operator_command,
+)
 from codex_supervisor.state import StateStore
-from codex_supervisor.tui_state import TaskSnapshot, load_task_snapshots
+from codex_supervisor.tui_state import TaskSnapshot
 from codex_supervisor.tui_widgets import TaskDetailPane, TaskListPane, TaskOutputPane
 
 
@@ -52,19 +56,22 @@ class SupervisorTuiApp(App[None]):
         self._render()
 
     def action_pause_task(self) -> None:
-        return
+        if self.focused_task_id is not None:
+            write_operator_command(command_type="pause", task_id=self.focused_task_id)
 
     def action_resume_task(self) -> None:
-        return
+        if self.focused_task_id is not None:
+            write_operator_command(command_type="resume", task_id=self.focused_task_id)
 
     def action_cancel_task(self) -> None:
-        return
+        if self.focused_task_id is not None:
+            write_operator_command(command_type="cancel", task_id=self.focused_task_id)
 
     def action_show_logs(self) -> None:
         return
 
     def refresh_snapshots(self) -> None:
-        self.snapshots = load_task_snapshots(self.store, self.config.data_dir)
+        self.snapshots = read_task_snapshots()
         if self.snapshots and self.focused_task_id is None:
             self.focused_task_id = self.snapshots[0].task_id
         if self.focused_task_id not in {snapshot.task_id for snapshot in self.snapshots}:

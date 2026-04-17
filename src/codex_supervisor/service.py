@@ -5,6 +5,7 @@ from codex_supervisor.config import load_config
 from codex_supervisor.ipc import CommandInbox
 from codex_supervisor.models import TaskKind
 from codex_supervisor.state import StateStore
+from codex_supervisor.tui_state import TaskSnapshot, load_task_snapshots
 
 
 def resolve_project_root() -> Path:
@@ -32,6 +33,12 @@ def write_operator_command(*, command_type: str, task_id: int) -> None:
     config = load_config(resolve_project_root())
     inbox = CommandInbox(config.data_dir / "commands")
     inbox.write_command({"type": command_type, "task_id": task_id})
+
+
+def read_task_snapshots() -> list[TaskSnapshot]:
+    config = load_config(resolve_project_root())
+    store = StateStore(config.data_dir / "supervisor.db")
+    return load_task_snapshots(store, config.data_dir)
 
 
 def render_task_status(task_id: int) -> str:
