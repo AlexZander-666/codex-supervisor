@@ -59,3 +59,28 @@ def test_load_task_snapshots_orders_active_tasks_first(tmp_path: Path) -> None:
     snapshots = load_task_snapshots(store, tmp_path)
 
     assert [snapshot.task_id for snapshot in snapshots][:2] == [second, first]
+
+
+def test_build_task_snapshot_truncates_recent_output_to_last_lines(tmp_path: Path) -> None:
+    store = StateStore(tmp_path / "supervisor.db")
+    task_id = store.create_task(
+        kind=TaskKind.EXEC_PROMPT,
+        cwd=str(tmp_path),
+        payload={"prompt": "tail"},
+        priority=50,
+    )
+    log_path = tmp_path / "task.jsonl"
+    log_path.write_text(
+        "\n".join(
+            f'{{"type":"item.completed","item":{{"type":"agent_message","text":"line-{index}"}}}}'
+            for index in range(20)
+        ),
+        encoding="utf-8",
+    )
+
+    snapshot = build_task_snapshot(store.get_task(task_id), log_path)
+
+    assert "line-12" in snapshot.recent_output
+    assert "line-19" in snapshot.recent_output
+    assert "line-11" not in snapshot.recent_output
+    assert "line-0" not in snapshot.recent_output

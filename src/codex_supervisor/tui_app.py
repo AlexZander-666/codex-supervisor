@@ -40,6 +40,7 @@ class SupervisorTuiApp(App[None]):
 
     def on_mount(self) -> None:
         self.refresh_snapshots()
+        self.set_interval(1.0, self.refresh_snapshots)
 
     def action_cursor_down(self) -> None:
         self._move_focus(1)

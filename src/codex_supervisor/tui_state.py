@@ -22,7 +22,7 @@ class TaskSnapshot:
 def build_task_snapshot(task: TaskRecord, log_path: Path) -> TaskSnapshot:
     stage = "idle"
     current_command = ""
-    recent_output = ""
+    recent_lines: list[str] = []
 
     if log_path.exists():
         for raw_line in log_path.read_text(encoding="utf-8").splitlines():
@@ -35,14 +35,15 @@ def build_task_snapshot(task: TaskRecord, log_path: Path) -> TaskSnapshot:
                 stage = "command_execution"
                 current_command = item.get("command", "")
             if data.get("type") == "item.completed" and item.get("type") == "agent_message":
-                recent_output = item.get("text", "")
+                recent_lines.append(item.get("text", ""))
+                recent_lines = recent_lines[-8:]
 
     return TaskSnapshot(
         task_id=task.id,
         status=task.status.value,
         stage=stage,
         current_command=current_command,
-        recent_output=recent_output,
+        recent_output="\n".join(recent_lines),
         retry_count=task.attempt_count,
     )
 
