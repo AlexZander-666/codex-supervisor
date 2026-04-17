@@ -1,5 +1,45 @@
-"""Focused Textual widgets for the supervisor TUI.
+from textual.widgets import Static
 
-Task 4 only needs this module to exist so later tasks can evolve the layout
-without changing the command surface again.
-"""
+from codex_supervisor.tui_state import TaskSnapshot
+
+
+class TaskListPane(Static):
+    def render_snapshots(
+        self,
+        snapshots: list[TaskSnapshot],
+        *,
+        focused_task_id: int | None,
+    ) -> None:
+        lines = ["Tasks"]
+        for snapshot in snapshots:
+            marker = ">" if snapshot.task_id == focused_task_id else " "
+            lines.append(
+                f"{marker} #{snapshot.task_id} [{snapshot.status}] {snapshot.stage}"
+            )
+        self.update("\n".join(lines))
+
+
+class TaskDetailPane(Static):
+    def render_snapshot(self, snapshot: TaskSnapshot | None) -> None:
+        if snapshot is None:
+            self.update("No supervisor tasks.")
+            return
+        self.update(
+            "\n".join(
+                [
+                    f"Task #{snapshot.task_id}",
+                    f"Status: {snapshot.status}",
+                    f"Stage: {snapshot.stage}",
+                    f"Command: {snapshot.current_command or '-'}",
+                    f"Retries: {snapshot.retry_count}",
+                ]
+            )
+        )
+
+
+class TaskOutputPane(Static):
+    def render_snapshot(self, snapshot: TaskSnapshot | None) -> None:
+        if snapshot is None:
+            self.update("")
+            return
+        self.update(snapshot.recent_output)

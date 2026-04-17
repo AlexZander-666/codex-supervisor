@@ -3,6 +3,10 @@ import json
 from pathlib import Path
 
 from codex_supervisor.models import TaskRecord
+from codex_supervisor.state import StateStore
+
+
+ACTIVE_STATUSES = {"launching", "running", "backing_off"}
 
 
 @dataclass(frozen=True)
@@ -40,4 +44,15 @@ def build_task_snapshot(task: TaskRecord, log_path: Path) -> TaskSnapshot:
         current_command=current_command,
         recent_output=recent_output,
         retry_count=task.attempt_count,
+    )
+
+
+def load_task_snapshots(store: StateStore, data_dir: Path) -> list[TaskSnapshot]:
+    snapshots = []
+    for task in store.list_tasks(limit=200):
+        log_path = data_dir / "logs" / f"task-{task.id}.jsonl"
+        snapshots.append(build_task_snapshot(task, log_path))
+    return sorted(
+        snapshots,
+        key=lambda item: (item.status not in ACTIVE_STATUSES, -item.task_id),
     )

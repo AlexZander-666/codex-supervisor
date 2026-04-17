@@ -2,7 +2,7 @@ from pathlib import Path
 
 from codex_supervisor.models import TaskKind, TaskStatus
 from codex_supervisor.state import StateStore
-from codex_supervisor.tui_state import build_task_snapshot
+from codex_supervisor.tui_state import build_task_snapshot, load_task_snapshots
 
 
 def test_build_task_snapshot_extracts_structured_runtime_fields(tmp_path: Path) -> None:
@@ -36,3 +36,26 @@ def test_build_task_snapshot_extracts_structured_runtime_fields(tmp_path: Path) 
     assert snapshot.stage == "command_execution"
     assert snapshot.retry_count == 0
     assert "继续排查登录分支同步问题" in snapshot.recent_output
+
+
+def test_load_task_snapshots_orders_active_tasks_first(tmp_path: Path) -> None:
+    store = StateStore(tmp_path / "supervisor.db")
+    first = store.create_task(
+        kind=TaskKind.EXEC_PROMPT,
+        cwd=str(tmp_path),
+        payload={"prompt": "one"},
+        priority=50,
+    )
+    second = store.create_task(
+        kind=TaskKind.RESUME_SESSION,
+        cwd=str(tmp_path),
+        payload={"session_id": "session-2", "prompt": "continue"},
+        priority=100,
+        session_id="session-2",
+    )
+    store.transition_task(first, TaskStatus.SUCCEEDED, lease_owner=None)
+    store.transition_task(second, TaskStatus.RUNNING, lease_owner="daemon-main")
+
+    snapshots = load_task_snapshots(store, tmp_path)
+
+    assert [snapshot.task_id for snapshot in snapshots][:2] == [second, first]
