@@ -17,12 +17,14 @@ class TaskSnapshot:
     current_command: str
     recent_output: str
     retry_count: int
+    error: str
 
 
 def build_task_snapshot(task: TaskRecord, log_path: Path) -> TaskSnapshot:
     stage = "idle"
     current_command = ""
     recent_lines: list[str] = []
+    error = ""
 
     if log_path.exists():
         for raw_line in log_path.read_text(encoding="utf-8").splitlines():
@@ -31,12 +33,15 @@ def build_task_snapshot(task: TaskRecord, log_path: Path) -> TaskSnapshot:
             except json.JSONDecodeError:
                 continue
             item = data.get("item", {})
+            payload = data.get("payload", {})
             if data.get("type") == "item.started" and item.get("type") == "command_execution":
                 stage = "command_execution"
                 current_command = item.get("command", "")
             if data.get("type") == "item.completed" and item.get("type") == "agent_message":
                 recent_lines.append(item.get("text", ""))
                 recent_lines = recent_lines[-8:]
+            if data.get("type") == "event_msg" and payload.get("type") == "error":
+                error = payload.get("message", "")
 
     return TaskSnapshot(
         task_id=task.id,
@@ -45,6 +50,7 @@ def build_task_snapshot(task: TaskRecord, log_path: Path) -> TaskSnapshot:
         current_command=current_command,
         recent_output="\n".join(recent_lines),
         retry_count=task.attempt_count,
+        error=error,
     )
 
 

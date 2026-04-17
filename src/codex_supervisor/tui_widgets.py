@@ -24,17 +24,16 @@ class TaskDetailPane(Static):
         if snapshot is None:
             self.update("No supervisor tasks.")
             return
-        self.update(
-            "\n".join(
-                [
-                    f"Task #{snapshot.task_id}",
-                    f"Status: {snapshot.status}",
-                    f"Stage: {snapshot.stage}",
-                    f"Command: {snapshot.current_command or '-'}",
-                    f"Retries: {snapshot.retry_count}",
-                ]
-            )
-        )
+        lines = [
+            f"Task #{snapshot.task_id}",
+            f"Status: {snapshot.status}",
+            f"Stage: {snapshot.stage}",
+            f"Command: {snapshot.current_command or '-'}",
+            f"Retries: {snapshot.retry_count}",
+        ]
+        if snapshot.error:
+            lines.append(f"Error: {snapshot.error}")
+        self.update("\n".join(lines))
 
 
 class TaskOutputPane(Static):

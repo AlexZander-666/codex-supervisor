@@ -84,3 +84,27 @@ def test_build_task_snapshot_truncates_recent_output_to_last_lines(tmp_path: Pat
     assert "line-19" in snapshot.recent_output
     assert "line-11" not in snapshot.recent_output
     assert "line-0" not in snapshot.recent_output
+
+
+def test_build_task_snapshot_captures_error_and_retry_count(tmp_path: Path) -> None:
+    store = StateStore(tmp_path / "supervisor.db")
+    task_id = store.create_task(
+        kind=TaskKind.RESUME_SESSION,
+        cwd=str(tmp_path),
+        payload={"session_id": "session-9", "prompt": "continue"},
+        priority=100,
+        session_id="session-9",
+    )
+    store.transition_task(task_id, TaskStatus.BACKING_OFF, lease_owner=None)
+    store.increment_attempt_count(task_id)
+    log_path = tmp_path / "task.jsonl"
+    log_path.write_text(
+        '{"type":"event_msg","payload":{"type":"error","message":"exceeded retry limit, last status: 429 Too Many Requests"}}',
+        encoding="utf-8",
+    )
+
+    snapshot = build_task_snapshot(store.get_task(task_id), log_path)
+
+    assert snapshot.status == "backing_off"
+    assert snapshot.retry_count == 1
+    assert "429 Too Many Requests" in snapshot.error
