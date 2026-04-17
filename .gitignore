@@ -2,6 +2,7 @@ __pycache__/
 .benchmarks/
 .pytest_cache/
 .venv/
+.worktrees/
 build/
 dist/
 data/
