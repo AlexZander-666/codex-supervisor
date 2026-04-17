@@ -42,3 +42,8 @@ def test_pause_resume_cancel_write_commands_for_tui(tmp_path: Path, monkeypatch)
         "pause",
         "resume",
     ]
+
+
+def test_readme_mentions_tui_command() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    assert "codex-supervisor tui" in readme

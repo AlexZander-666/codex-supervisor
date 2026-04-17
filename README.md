@@ -72,6 +72,32 @@ codex-supervisor resume --task-id 1
 codex-supervisor cancel --task-id 1
 ```
 
+## Terminal TUI
+
+Launch the live supervisor console:
+
+```powershell
+codex-supervisor tui
+```
+
+The TUI only shows supervisor-managed tasks from `data/supervisor.db` plus their associated `data/logs/task-<id>.jsonl` streams. It presents structured state instead of raw JSONL by default: status, stage, current command, retries, recent output, and the latest error.
+
+Default keys:
+
+- `j` / `k`: move between tasks
+- `enter`: keep the current task focused
+- `p`: enqueue `pause` for the focused task
+- `r`: enqueue `resume` for the focused task
+- `c`: enqueue `cancel` for the focused task
+- `l`: keep the recent-output pane visible for the focused task
+- `q`: quit the TUI
+
+Refresh semantics:
+
+- The task list and detail pane refresh once per second.
+- Recent output shows the last 8 agent-message lines.
+- Operator actions still go through the existing `data/commands` inbox so the daemon remains the only execution engine.
+
 ## Recovery Workflow
 
 1. Start the daemon once.

@@ -50,6 +50,33 @@ codex-supervisor cancel --task-id 1
 codex-supervisor logs --task-id 1
 ```
 
+## Terminal TUI
+
+```powershell
+codex-supervisor tui
+```
+
+Use the TUI when you need a structured live console for supervisor-managed tasks only.
+
+What it shows:
+- Task status
+- Current stage
+- Current command
+- Retry count
+- Latest error
+- Recent output tail
+
+Default keys:
+- `j` / `k` to move between tasks
+- `enter` to keep the current task focused
+- `p` to pause
+- `r` to resume
+- `c` to cancel
+- `l` to keep recent output visible
+- `q` to quit
+
+Operator actions still enqueue JSON commands into `data/commands`; the daemon remains the only execution engine.
+
 ## Recovery Rules
 
 - New work must be submitted through the supervisor queue.
@@ -63,8 +90,8 @@ codex-supervisor logs --task-id 1
 ## Monitoring Pattern
 
 1. Confirm daemon is running and lock file exists.
-2. Check `codex-supervisor list`.
-3. Inspect task logs for the active or backing-off task.
+2. Open `codex-supervisor tui` for the structured live view, or use `codex-supervisor list` if a plain CLI view is enough.
+3. Inspect `codex-supervisor logs --task-id <id>` when raw task JSONL is needed.
 4. If a task hits a recoverable interruption, allow the daemon to back off and retry.
 5. Only intervene manually after root cause evidence is collected.
 
